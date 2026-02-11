@@ -29,13 +29,13 @@ func NewClient() (*Client, error) {
 }
 
 // GenerateMRDescription sends the git context to AI and returns MR description
-func (c *Client) GenerateMRDescription(commits, diff string) (string, error) {
+func (c *Client) GenerateMRDescription(commits, diff, model string) (string, error) {
 	prompt := buildPrompt(commits, diff)
 
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: "gemini-3-pro",
+			Model: model,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
@@ -73,16 +73,29 @@ Please provide a well-structured merge request description following the templat
 }
 
 func getMRTemplate() string {
-	return `# Merge Request Template
-
-## Summary
+	return `# Template for Merge Request Description
+## Description
 [Provide a brief overview of what this MR accomplishes]
 
 ## Changes Made
 [List the key changes]
 
-## Testing
-[Describe how this was tested]
+## Type of Change
+- [ ] Feature (new functionality)
+- [ ] Bug Fix
+- [ ] Documentation Update
+- [ ] Code Refactor
+- [ ] Performance Improvement
+- [ ] Other (please specify)
+
+## Testing Done
+[Describe the testing approach and results]
+
+## Checklist
+
+- [ ] I have performed a self-review of my code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have updated the documentation accordingly
 
 ## Related Issues
 [Link any related tickets or issues]`

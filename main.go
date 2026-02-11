@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var modelFlag string
+
 var rootCmd = &cobra.Command{
 	Use:   "cih-mr [branch-comparison]",
 	Short: "Generate merge request description using AI",
@@ -19,6 +21,10 @@ var rootCmd = &cobra.Command{
 	Example: cih-mr origin/dev..origin/feat`,
 	Args: cobra.ExactArgs(1),
 	Run:  runMRGenerator,
+}
+
+func init() {
+	rootCmd.Flags().StringVarP(&modelFlag, "model", "m", "gemini-3-pro", "AI model to use for generating descriptions")
 }
 
 func runMRGenerator(cmd *cobra.Command, args []string) {
@@ -50,7 +56,7 @@ func runMRGenerator(cmd *cobra.Command, args []string) {
 	}
 
 	// Generate MR description
-	description, err := aiClient.GenerateMRDescription(commits, diff)
+	description, err := aiClient.GenerateMRDescription(commits, diff, modelFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
