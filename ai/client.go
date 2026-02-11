@@ -35,7 +35,7 @@ func (c *Client) GenerateMRDescription(commits, diff string) (string, error) {
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: openai.GPT4,
+			Model: "gemini-3-pro",
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
