@@ -1,7 +1,7 @@
 # Release Notes - Version [X.Y.Z]
 
 ## Release Date
-[Date]
+{{DATE_YYYY_MM_DD}}
 
 ## Overview
 [Brief summary of what this release delivers and why it matters]
