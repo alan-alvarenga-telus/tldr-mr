@@ -25,42 +25,93 @@ go build -o cih-mr
 
 ## Configuration
 
+### API Key
+
 Set the `AI_KEY` environment variable with your API key:
 
 ```bash
 export AI_KEY=your-api-key
 ```
 
+### Custom AI Prompt (Optional)
+
+Create a `prompt-context.md` file in your project root to customize how the AI generates descriptions. This file should include:
+- Instructions for the AI's writing style and tone
+- Project-specific context (what the project does, tech stack, team conventions)
+- Any specific guidance for MR descriptions
+
+**Example `prompt-context.md`:**
+
+```markdown
+You are a developer writing a merge request description for your team.
+
+Write like a human. Be direct. Use simple words. Avoid buzzwords and jargon.
+
+Your goal is clarity, not perfection. Reviewers should understand:
+- What changed
+- Why it changed
+- What to watch out for
+
+Keep it professional but real. Be concise. Skip the fluff.
+
+## About This Project
+
+We're building an e-commerce platform for small businesses. The main users are 
+shop owners who need reliability over fancy features. We prioritize uptime and
+data accuracy.
+
+Tech stack: Go backend, React frontend, PostgreSQL database.
+```
+
+The tool will automatically use `prompt-context.md` if it exists. You can also specify a different file:
+
+```bash
+cih-mr --prompt ./custom-prompt.md
+cih-mr -p ./prompts/detailed.md
+```
+
+If no prompt file is provided, the tool uses a sensible built-in default.
+
 ## Usage
 
 ```bash
-cih-mr <branch-comparison> [flags]
+cih-mr [branch-comparison] [flags]
 ```
 
 ### Flags
 
+- `-b, --base` - Base branch to compare against (branch you're merging INTO) (default: `dev`)
+- `-f, --head` - Head branch with changes (branch you're merging FROM) (default: current branch)
 - `-m, --model` - AI model to use for generating descriptions (default: `gemini-3-pro`)
+- `-p, --prompt` - Path to prompt file with AI instructions and project context (default: `prompt-context.md` if exists)
 
 ### Examples
 
-Compare a feature branch against the dev branch:
+**Simple usage (recommended):**
 ```bash
+# Compare current branch against dev (uses defaults)
+cih-mr
+
+# Compare current branch against main
+cih-mr -b main
+
+# Compare specific branches explicitly
+cih-mr -b dev -f feature-123
+
+# With custom AI model
+cih-mr -b main -m gpt-4
+
+# With custom prompt file
+cih-mr -b main --prompt ./prompts/detailed.md
+```
+
+**Legacy usage (still supported):**
+```bash
+# Direct branch comparison string
 cih-mr origin/dev..origin/feat
-```
 
-Compare local branches:
-```bash
+# Local branches
 cih-mr main..feature-branch
-```
-
-Use a specific AI model:
-```bash
-cih-mr main..dev/feat1 --model gemini-pro-3
-```
-
-Or use the short flag:
-```bash
-cih-mr main..dev/feat1 -m gpt-4
 ```
 
 ## Output
