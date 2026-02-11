@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	modelFlag  string
-	baseFlag   string
-	headFlag   string
-	promptFlag string
+	modelFlag    string
+	baseFlag     string
+	headFlag     string
+	promptFlag   string
+	templateFlag string
 )
 
 var rootCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&baseFlag, "base", "b", "dev", "Base branch to compare against (branch you're merging INTO)")
 	rootCmd.Flags().StringVarP(&headFlag, "head", "f", "", "Head branch with changes (branch you're merging FROM, defaults to current branch)")
 	rootCmd.Flags().StringVarP(&promptFlag, "prompt", "p", "", "Path to prompt file with AI instructions and project context (default: prompt-context.md if exists)")
+	rootCmd.Flags().StringVarP(&templateFlag, "template", "t", "", "Path to template file for output structure (default: template.md if exists)")
 }
 
 // getCurrentBranch returns the name of the current git branch
@@ -72,6 +74,30 @@ func loadPromptFile() (string, error) {
 	}
 
 	// No prompt file found - return empty to use built-in default
+	return "", nil
+}
+
+// loadTemplateFile loads the template from file or returns empty string for built-in default
+func loadTemplateFile() (string, error) {
+	var templatePath string
+
+	if templateFlag != "" {
+		// Explicit flag provided - must exist
+		templatePath = templateFlag
+		content, err := os.ReadFile(templatePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read template file %s: %v", templatePath, err)
+		}
+		return string(content), nil
+	}
+
+	// Check for default template.md
+	templatePath = "template.md"
+	if content, err := os.ReadFile(templatePath); err == nil {
+		return string(content), nil
+	}
+
+	// No template file found - return empty to use built-in default
 	return "", nil
 }
 
@@ -130,8 +156,15 @@ func runMRGenerator(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Load template file
+	template, err := loadTemplateFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Generate MR description
-	description, err := aiClient.GenerateMRDescription(commits, diff, modelFlag, systemPrompt)
+	description, err := aiClient.GenerateMRDescription(commits, diff, modelFlag, systemPrompt, template)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

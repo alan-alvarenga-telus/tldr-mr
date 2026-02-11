@@ -1,13 +1,20 @@
 # cih-mr
 
-A command-line tool that generates merge/pull request descriptions using AI by analyzing git commits and diffs.
+A flexible command-line tool that uses AI to generate documentation from git commits and diffs. Perfect for creating merge request descriptions, changelogs, release notes, and more.
 
 ## Overview
 
-`cih-mr` automates the creation of merge request descriptions by:
+`cih-mr` automates the creation of git-based documentation by:
 1. Fetching commit history between two branches
 2. Analyzing the code diff
-3. Using AI to generate a structured MR description based on a template
+3. Using AI to generate structured output based on customizable templates and prompts
+
+**Use Cases:**
+- 📝 Merge/Pull Request descriptions
+- 📋 Changelogs
+- 🚀 Release notes
+- 📊 Sprint summaries
+- 📖 Any git history-based documentation
 
 ## Installation
 
@@ -72,6 +79,37 @@ cih-mr -p ./prompts/detailed.md
 
 If no prompt file is provided, the tool uses a sensible built-in default.
 
+### Custom Output Templates (Optional)
+
+Create a `template.md` file to define the structure and format of the generated output. This makes the tool flexible for different use cases.
+
+**Example `template.md` (for MR descriptions):**
+
+```markdown
+# Merge Request Description
+
+## Summary
+[Brief overview]
+
+## Changes Made
+[List key changes]
+
+## Testing Done
+[Describe testing]
+
+## Breaking Changes
+[List or note "None"]
+```
+
+The tool will automatically use `template.md` if it exists. You can also specify a different template:
+
+```bash
+cih-mr --template ./examples/changelog-template.md
+cih-mr -t ./examples/release-notes-template.md
+```
+
+If no template file is provided, the tool uses a built-in MR template.
+
 ## Usage
 
 ```bash
@@ -84,6 +122,7 @@ cih-mr [branch-comparison] [flags]
 - `-f, --head` - Head branch with changes (branch you're merging FROM) (default: current branch)
 - `-m, --model` - AI model to use for generating descriptions (default: `gemini-3-pro`)
 - `-p, --prompt` - Path to prompt file with AI instructions and project context (default: `prompt-context.md` if exists)
+- `-t, --template` - Path to template file for output structure (default: `template.md` if exists)
 
 ### Examples
 
@@ -105,6 +144,18 @@ cih-mr -b main -m gpt-4
 cih-mr -b main --prompt ./prompts/detailed.md
 ```
 
+**Different output types:**
+```bash
+# Generate a changelog
+cih-mr -t examples/changelog-template.md -p examples/changelog-prompt.md
+
+# Generate release notes
+cih-mr -t examples/release-notes-template.md -p examples/release-notes-prompt.md
+
+# Custom workflow for your team
+cih-mr -t ./team-templates/sprint-summary.md -p ./team-prompts/agile.md
+```
+
 **Legacy usage (still supported):**
 ```bash
 # Direct branch comparison string
@@ -116,12 +167,23 @@ cih-mr main..feature-branch
 
 ## Output
 
-The tool generates a structured merge request description following this template:
+The tool generates structured output based on the template you provide (or the built-in default). The default template produces a merge request description with:
 
-- **Summary** - Brief overview of what the MR accomplishes
+- **Summary** - Brief overview of what this accomplishes
 - **Changes Made** - List of key changes
-- **Testing** - Description of how changes were tested
-- **Related Issues** - Links to related tickets or issues
+- **Type of Change** - Categorization (feature, bug fix, etc.)
+- **Testing Done** - Description of testing approach
+- **Breaking Changes** - Any breaking changes
+- **Related Issues** - Links to related tickets
+
+## Example Templates
+
+The repository includes example templates and prompts in the `examples/` directory:
+
+- **Changelog**: `changelog-template.md` + `changelog-prompt.md`
+- **Release Notes**: `release-notes-template.md` + `release-notes-prompt.md`
+
+These demonstrate how to customize the tool for different documentation needs.
 
 ## Dependencies
 

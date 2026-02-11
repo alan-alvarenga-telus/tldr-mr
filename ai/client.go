@@ -21,6 +21,31 @@ Keep it professional but real. This should read like something a developer actua
 
 Be concise. Skip the fluff. If something is obvious from the code, don't over-explain it.`
 
+const defaultMRTemplate = `# Merge Request Description
+
+## Summary
+[Provide a brief overview of what this MR accomplishes]
+
+## Changes Made
+[List the key changes]
+
+## Type of Change
+- [ ] Feature (new functionality)
+- [ ] Bug Fix
+- [ ] Documentation Update
+- [ ] Code Refactor
+- [ ] Performance Improvement
+- [ ] Other (please specify)
+
+## Testing Done
+[Describe the testing approach and results]
+
+## Breaking Changes
+[List any breaking changes or note "None"]
+
+## Related Issues
+[Link any related tickets or issues]`
+
 // Client wraps the OpenAI client
 type Client struct {
 	client *openai.Client
@@ -42,13 +67,18 @@ func NewClient() (*Client, error) {
 }
 
 // GenerateMRDescription sends the git context to AI and returns MR description
-func (c *Client) GenerateMRDescription(commits, diff, model, systemPrompt string) (string, error) {
+func (c *Client) GenerateMRDescription(commits, diff, model, systemPrompt, template string) (string, error) {
 	// Use provided system prompt or fall back to default
 	if systemPrompt == "" {
 		systemPrompt = defaultSystemPrompt
 	}
 
-	prompt := buildPrompt(commits, diff)
+	// Use provided template or fall back to default
+	if template == "" {
+		template = defaultMRTemplate
+	}
+
+	prompt := buildPrompt(commits, diff, template)
 
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
@@ -77,10 +107,8 @@ func (c *Client) GenerateMRDescription(commits, diff, model, systemPrompt string
 	return resp.Choices[0].Message.Content, nil
 }
 
-func buildPrompt(commits, diff string) string {
-	template := getMRTemplate()
-
-	return fmt.Sprintf(`Based on the following git commits and code changes, please fill out this merge request template with a clear, concise description.
+func buildPrompt(commits, diff, template string) string {
+	return fmt.Sprintf(`Based on the following git commits and code changes, please fill out this template with a clear, concise description.
 
 %s
 
@@ -90,35 +118,6 @@ func buildPrompt(commits, diff string) string {
 ## Code Changes:
 %s
 
-Please provide a well-structured merge request description following the template above.`,
+Please provide a well-structured description following the template above.`,
 		template, commits, diff)
-}
-
-func getMRTemplate() string {
-	return `# Template for Merge Request Description
-## Description
-[Provide a brief overview of what this MR accomplishes]
-
-## Changes Made
-[List the key changes]
-
-## Type of Change
-- [ ] Feature (new functionality)
-- [ ] Bug Fix
-- [ ] Documentation Update
-- [ ] Code Refactor
-- [ ] Performance Improvement
-- [ ] Other (please specify)
-
-## Testing Done
-[Describe the testing approach and results]
-
-## Checklist
-
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have updated the documentation accordingly
-
-## Related Issues
-[Link any related tickets or issues]`
 }
