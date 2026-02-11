@@ -94,7 +94,7 @@ func runMRGenerator(cmd *cobra.Command, args []string) {
 			}
 			head = currentBranch
 		}
-		branchComparison = fmt.Sprintf("%s..%s", baseFlag, head)
+		branchComparison = fmt.Sprintf("%s...%s", baseFlag, head)
 	}
 
 	fmt.Printf("Analyzing: %s\n\n", branchComparison)

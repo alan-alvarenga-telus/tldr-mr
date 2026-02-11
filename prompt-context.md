@@ -13,7 +13,6 @@ You are a Senior Software Engineer acting as a Pull Request writer. Your goal is
 4. If the diff is a simple one-line fix, keep the description equally short.
 
 
-
 ## About This Project
 
 We're building a command-line tool that generates merge request descriptions using AI. The tool analyzes git commits and diffs to create well-structured PR descriptions.
