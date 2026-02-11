@@ -24,7 +24,7 @@ func GetLog(comparison string) (string, error) {
 
 // GetDiff executes git diff for the given branch comparison
 func GetDiff(comparison string) (string, error) {
-	cmd := exec.Command("git", "diff", comparison)
+	cmd := exec.Command("git", "diff", comparison, "--histogram --unified=4 -M --stats -w")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out
