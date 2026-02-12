@@ -3,13 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"cih-mr/ai"
 	"cih-mr/git"
 
 	"github.com/spf13/cobra"
+)
+
+const (
+	defaultPromptFile   = "prompt-context.md"
+	defaultTemplateFile = "template.md"
 )
 
 var (
@@ -35,6 +39,7 @@ var rootCmd = &cobra.Command{
 	Run:  runMRGenerator,
 }
 
+// init registers command-line flags for the root command
 func init() {
 	rootCmd.Flags().StringVarP(&modelFlag, "model", "m", "gemini-3-pro", "AI model to use for generating descriptions")
 	rootCmd.Flags().StringVarP(&baseFlag, "base", "b", "dev", "Base branch to compare against (branch you're merging INTO)")
@@ -43,139 +48,129 @@ func init() {
 	rootCmd.Flags().StringVarP(&templateFlag, "template", "t", "", "Path to template file for output structure (default: template.md if exists)")
 }
 
-// getCurrentBranch returns the name of the current git branch
-func getCurrentBranch() (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current branch: %v", err)
-	}
-	return strings.TrimSpace(string(output)), nil
+// fatalError prints an error message and exits with status code 1
+func fatalError(err error) {
+	fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	os.Exit(1)
 }
 
-// loadPromptFile loads the system prompt from file or returns empty string for built-in default
-func loadPromptFile() (string, error) {
-	var promptPath string
-
-	if promptFlag != "" {
+// loadFileWithDefault loads a file with fallback to default filename
+// Returns empty string if neither explicit nor default file exists (unless explicit was provided)
+func loadFileWithDefault(explicitPath, defaultPath, fileType string) (string, error) {
+	if explicitPath != "" {
 		// Explicit flag provided - must exist
-		promptPath = promptFlag
-		content, err := os.ReadFile(promptPath)
+		content, err := os.ReadFile(explicitPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read prompt file %s: %v", promptPath, err)
+			return "", fmt.Errorf("failed to read %s file %s: %v", fileType, explicitPath, err)
 		}
 		return string(content), nil
 	}
 
-	// Check for default prompt-context.md
-	promptPath = "prompt-context.md"
-	if content, err := os.ReadFile(promptPath); err == nil {
+	// Check for default file
+	if content, err := os.ReadFile(defaultPath); err == nil {
 		return string(content), nil
 	}
 
-	// No prompt file found - return empty to use built-in default
+	// No file found - return empty to use built-in default
 	return "", nil
 }
 
-// loadTemplateFile loads the template from file or returns empty string for built-in default
-func loadTemplateFile() (string, error) {
-	var templatePath string
-
-	if templateFlag != "" {
-		// Explicit flag provided - must exist
-		templatePath = templateFlag
-		content, err := os.ReadFile(templatePath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read template file %s: %v", templatePath, err)
-		}
-		return string(content), nil
-	}
-
-	// Check for default template.md
-	templatePath = "template.md"
-	if content, err := os.ReadFile(templatePath); err == nil {
-		return string(content), nil
-	}
-
-	// No template file found - return empty to use built-in default
-	return "", nil
-}
-
-func runMRGenerator(cmd *cobra.Command, args []string) {
-	var branchComparison string
-
-	// Build branch comparison string
+// determineBranchComparison builds the branch comparison string from args or flags
+func determineBranchComparison(args []string) (string, error) {
 	if len(args) > 0 {
 		// Legacy mode: use positional argument
-		branchComparison = args[0]
-	} else {
-		// New mode: build from flags
-		head := headFlag
-		if head == "" {
-			// Auto-detect current branch
-			currentBranch, err := getCurrentBranch()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			head = currentBranch
+		return args[0], nil
+	}
+
+	// New mode: build from flags
+	head := headFlag
+	if head == "" {
+		// Auto-detect current branch
+		currentBranch, err := git.GetCurrentBranch()
+		if err != nil {
+			return "", err
 		}
-		branchComparison = fmt.Sprintf("%s...%s", baseFlag, head)
+		head = currentBranch
 	}
+	return fmt.Sprintf("%s...%s", baseFlag, head), nil
+}
 
-	fmt.Printf("Analyzing: %s\n\n", branchComparison)
-
-	// Get git log
+// fetchGitData retrieves commit history and diff for the given branch comparison
+func fetchGitData(branchComparison string) (commits, diff string, err error) {
 	fmt.Println("📝 Fetching commit history...")
-	commits, err := git.GetLog(branchComparison)
+	commits, err = git.GetLog(branchComparison)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return "", "", err
 	}
 
-	// Get git diff
 	fmt.Println("📊 Fetching changes...")
-	diff, err := git.GetDiff(branchComparison)
+	diff, err = git.GetDiff(branchComparison)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return "", "", err
 	}
 
-	// Create AI client
-	fmt.Println("🤖 Generating MR description...")
-	aiClient, err := ai.NewClient()
+	return commits, diff, nil
+}
+
+// loadConfigFiles loads prompt and template files with fallback to defaults
+func loadConfigFiles() (systemPrompt, template string, err error) {
+	systemPrompt, err = loadFileWithDefault(promptFlag, defaultPromptFile, "prompt")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return "", "", err
 	}
 
-	// Load prompt file
-	systemPrompt, err := loadPromptFile()
+	template, err = loadFileWithDefault(templateFlag, defaultTemplateFile, "template")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return "", "", err
 	}
 
-	// Load template file
-	template, err := loadTemplateFile()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	return systemPrompt, template, nil
+}
 
-	// Generate MR description
-	description, err := aiClient.GenerateMRDescription(commits, diff, modelFlag, systemPrompt, template)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Output result
+// printResult outputs the generated MR description in a formatted box
+func printResult(description string) {
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("MERGE REQUEST DESCRIPTION")
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println(description)
 	fmt.Println(strings.Repeat("=", 60))
+}
+
+func runMRGenerator(cmd *cobra.Command, args []string) {
+	// Determine branch comparison
+	branchComparison, err := determineBranchComparison(args)
+	if err != nil {
+		fatalError(err)
+	}
+
+	fmt.Printf("Analyzing: %s\n\n", branchComparison)
+
+	// Fetch git data
+	commits, diff, err := fetchGitData(branchComparison)
+	if err != nil {
+		fatalError(err)
+	}
+
+	// Load configuration files
+	systemPrompt, template, err := loadConfigFiles()
+	if err != nil {
+		fatalError(err)
+	}
+
+	// Create AI client and generate description
+	fmt.Println("🤖 Generating MR description...")
+	aiClient, err := ai.NewClient()
+	if err != nil {
+		fatalError(err)
+	}
+
+	description, err := aiClient.GenerateMRDescription(commits, diff, modelFlag, systemPrompt, template)
+	if err != nil {
+		fatalError(err)
+	}
+
+	// Output result
+	printResult(description)
 }
 
 func main() {
