@@ -98,7 +98,7 @@ func determineBranchComparison(args []string) (string, error) {
 // fetchGitData retrieves commit history and diff for the given branch comparison
 func fetchGitData(branchComparison string) (commits, diff string, err error) {
 	fmt.Println("📝 Fetching commit history...")
-	commits, err = git.GetLog(branchComparison)
+	commits, err = git.GetLog(strings.Replace(branchComparison, "...", "..", 1))
 	if err != nil {
 		return "", "", err
 	}
@@ -131,7 +131,7 @@ func loadConfigFiles() (systemPrompt, template string, err error) {
 func printResult(description string) {
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("MERGE REQUEST DESCRIPTION")
-	fmt.Println(strings.Repeat("=", 60))
+	fmt.Println(strings.Repeat("=", 60) + "\n")
 	fmt.Println(description)
 	fmt.Println(strings.Repeat("=", 60))
 }
