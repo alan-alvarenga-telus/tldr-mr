@@ -14,6 +14,9 @@ import (
 const (
 	defaultPromptFile   = "prompt-context.md"
 	defaultTemplateFile = "template.md"
+
+	threeDot = "..."
+	twoDot   = ".."
 )
 
 var (
@@ -75,30 +78,39 @@ func loadFileWithDefault(explicitPath, defaultPath, fileType string) (string, er
 	return "", nil
 }
 
+// BranchResolver interface for getting current branch (enables testing)
+type BranchResolver interface {
+	GetCurrentBranch() (string, error)
+}
+
+// gitBranchResolver implements BranchResolver using actual git
+type gitBranchResolver struct{}
+
+func (gitBranchResolver) GetCurrentBranch() (string, error) {
+	return git.GetCurrentBranch()
+}
+
 // determineBranchComparison builds the branch comparison string from args or flags
-func determineBranchComparison(args []string) (string, error) {
+func determineBranchComparison(args []string, resolver BranchResolver) (string, error) {
 	if len(args) > 0 {
-		// Legacy mode: use positional argument
 		return args[0], nil
 	}
 
-	// New mode: build from flags
 	head := headFlag
 	if head == "" {
-		// Auto-detect current branch
-		currentBranch, err := git.GetCurrentBranch()
+		currentBranch, err := resolver.GetCurrentBranch()
 		if err != nil {
 			return "", err
 		}
 		head = currentBranch
 	}
-	return fmt.Sprintf("%s...%s", baseFlag, head), nil
+	return fmt.Sprintf("%s%s%s", baseFlag, threeDot, head), nil
 }
 
 // fetchGitData retrieves commit history and diff for the given branch comparison
 func fetchGitData(branchComparison string) (commits, diff string, err error) {
 	fmt.Println("📝 Fetching commit history...")
-	commits, err = git.GetLog(strings.Replace(branchComparison, "...", "..", 1))
+	commits, err = git.GetLog(strings.Replace(branchComparison, threeDot, twoDot, 1))
 	if err != nil {
 		return "", "", err
 	}
@@ -137,8 +149,7 @@ func printResult(description string) {
 }
 
 func runMRGenerator(cmd *cobra.Command, args []string) {
-	// Determine branch comparison
-	branchComparison, err := determineBranchComparison(args)
+	branchComparison, err := determineBranchComparison(args, gitBranchResolver{})
 	if err != nil {
 		fatalError(err)
 	}
