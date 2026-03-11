@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Short: "Generate merge request description using AI",
 	Long: `Analyzes git changes between branches and generates a merge request
 	description using AI based on commits and diffs.
-	
+
 	Examples:
 	  cih-mr                              # Compare current branch against dev
 	  cih-mr -b main                      # Compare current branch against main
@@ -110,7 +110,7 @@ func determineBranchComparison(args []string, resolver BranchResolver) (string, 
 // fetchGitData retrieves commit history and diff for the given branch comparison
 func fetchGitData(branchComparison string) (commits, diff string, err error) {
 	fmt.Println("📝 Fetching commit history...")
-	commits, err = git.GetLog(strings.Replace(branchComparison, threeDot, twoDot, 1))
+	commits, err = git.GetLog(strings.Replace(branchComparison, twoDot, twoDot, 1))
 	if err != nil {
 		return "", "", err
 	}
