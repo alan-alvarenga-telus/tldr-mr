@@ -3,12 +3,11 @@ package git
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
 func GetDiff(comparison string) (string, error) {
-	cmd := exec.Command("git", "diff", comparison, "--histogram", "--unified=5", "-M", "--stat", "-w")
+	cmd := execCommand("git", "diff", comparison, "--histogram", "--unified=5", "-M", "--stat", "-w")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out

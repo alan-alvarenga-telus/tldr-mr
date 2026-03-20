@@ -107,16 +107,34 @@ func determineBranchComparison(args []string, resolver BranchResolver) (string, 
 	return fmt.Sprintf("%s%s%s", baseFlag, threeDot, head), nil
 }
 
-// fetchGitData retrieves commit history and diff for the given branch comparison
+// toTwoDot normalises a branch comparison to two-dot syntax (A..B).
+// git log uses two-dot to list commits reachable from B but not A.
+func toTwoDot(comparison string) string {
+	return strings.ReplaceAll(comparison, threeDot, twoDot)
+}
+
+// toThreeDot normalises a branch comparison to three-dot syntax (A...B).
+// git diff uses three-dot to show changes since the branch diverged from base.
+func toThreeDot(comparison string) string {
+	// Replace two-dot only where it is not already three-dot.
+	// Walk the string and replace standalone ".." (not part of "...").
+	result := strings.ReplaceAll(comparison, threeDot, "\x00") // protect existing "..."
+	result = strings.ReplaceAll(result, twoDot, threeDot)      // upgrade ".." → "..."
+	return strings.ReplaceAll(result, "\x00", threeDot)        // restore protected "..."
+}
+
+// fetchGitData retrieves commit history and diff for the given branch comparison.
+// git log uses two-dot (A..B): commits on B not yet in A.
+// git diff uses three-dot (A...B): changes since B diverged from A.
 func fetchGitData(branchComparison string) (commits, diff string, err error) {
 	fmt.Println("📝 Fetching commit history...")
-	commits, err = git.GetLog(strings.Replace(branchComparison, twoDot, twoDot, 1))
+	commits, err = git.GetLog(toTwoDot(branchComparison))
 	if err != nil {
 		return "", "", err
 	}
 
 	fmt.Println("📊 Fetching changes...")
-	diff, err = git.GetDiff(branchComparison)
+	diff, err = git.GetDiff(toThreeDot(branchComparison))
 	if err != nil {
 		return "", "", err
 	}
@@ -186,7 +204,6 @@ func runMRGenerator(cmd *cobra.Command, args []string) {
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 }

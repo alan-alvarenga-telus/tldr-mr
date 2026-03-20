@@ -83,8 +83,11 @@ func (c *Client) GenerateMRDescription(commits, diff, model, systemPrompt, templ
 
 	prompt := buildPrompt(commits, diff, template)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
 	resp, err := c.client.CreateChatCompletion(
-		context.Background(),
+		ctx,
 		openai.ChatCompletionRequest{
 			Model: model,
 			Messages: []openai.ChatCompletionMessage{

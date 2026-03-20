@@ -107,6 +107,50 @@ func TestDetermineBranchComparison(t *testing.T) {
 	})
 }
 
+func TestToTwoDot(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"dev...feature", "dev..feature"},
+		{"dev..feature", "dev..feature"},
+		{"origin/dev...origin/feature", "origin/dev..origin/feature"},
+		{"origin/dev..origin/feature", "origin/dev..origin/feature"},
+		{"main...feature-123", "main..feature-123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := toTwoDot(tt.input)
+			if result != tt.expected {
+				t.Errorf("toTwoDot(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestToThreeDot(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"dev..feature", "dev...feature"},
+		{"dev...feature", "dev...feature"},
+		{"origin/dev..origin/feature", "origin/dev...origin/feature"},
+		{"origin/dev...origin/feature", "origin/dev...origin/feature"},
+		{"main..feature-123", "main...feature-123"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := toThreeDot(tt.input)
+			if result != tt.expected {
+				t.Errorf("toThreeDot(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 type mockBranchResolver struct {
 	branch string
 	err    error

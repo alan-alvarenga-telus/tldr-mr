@@ -3,12 +3,11 @@ package git
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
 func GetLog(comparison string) (string, error) {
-	cmd := exec.Command("git", "log", comparison, "--oneline")
+	cmd := execCommand("git", "log", comparison, "--oneline")
 	var out bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &out

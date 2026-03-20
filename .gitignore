@@ -52,3 +52,4 @@ Thumbs.db
 # prompt-context.md
 # template.md
 *.zip
+.opencode/
